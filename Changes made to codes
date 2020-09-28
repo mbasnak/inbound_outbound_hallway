@@ -1,0 +1,56 @@
+Changes made to the different codes to have the inbound/outbound hallway running
+
+
+PATTERN
+
+I created a new pattern (pattern #38) that has low contrast gratings moving with changes in y dimention, without the black bars in the two ends, with a fixed bright cue ('Sun') to the side, and that has the capacity to rotate with changes in x.
+
+
+
+MATLAB codes
+
+1) I added an experiment type called 'inboundOutbound' which is now exp # 9 to the 'fly_experiments' gui.
+
+2) I changed the 'begin_trials' code, so that now it calls a different run_trial code for exp #9, called 'run_trial_inbound_outbound'.
+
+3) I created a code called 'run_trial_inbound_outbound' that runs the trials for the inbound/outbound experiment.
+
+4) I created a code called 'stopExp' that listens to the panels y dimension. If the animal has reached the end of the hallway, it changes the trip_type from 'inbound' to 'outbound'. If the animal has reached the start of the hallway, it changes the trip_type back to 'inbound' and adds a trip to the trip_counter. Once 50 full trips have been reached, it stop the panels and the acquisition.
+
+	To-do:
+		-The current 'display_trial' won't be useful for plotting this, especially considering that the full experiment is here a trial. Maybe I should use the python interactive plotting to have it plot the animal's behavior live?
+
+		-Eliminate the empty trials.
+
+
+
+PYTHON CODES
+
+1) I changed 'run_experiment.py' to have it go to the path of the new folder. I've also changed the last argument that it reads from the command line such that now, for this experiment, it reads a vector with the identity of the probe trials. I have added 2 additional arguments, corresponding to the 360 world rotations for outbound runs and for inbound runs.
+
+
+2) I'm changing 'fictrac_2d.py':
+	-I am generating randomly sampled probe_trials (maybe this should be moved to 'protocol.py' instead?)
+
+
+3) I'm changing 'protocol.py':
+	-I'm adding a panel update function called 'inboundOutboundPanels' for exp # 9.
+	-I'm adding a function to deliver the opto stim for exp #9 called 'inboundOutbound'
+	-I'm adding the variable 'trip_type'
+	-I'm generating the variable 'the_gain', to be inverted when the animal changes trip_type.
+
+
+
+To-do:
+
+-change channel number using panel settings file:
+	-add multiple choice button to GUI defining the room we're running the experiment in
+	-add the y dimension channel using the loadSettings function 
+
+-run the full experiment and check that the data is stored properly.
+
+-make matlab figure to display the data?
+
+-push codes to github: I have started a github repository and cloned it to the desktop. I need to copy all the files, add, commit and push the changes
+
+-check why data isn't being saved or where it is saved.
