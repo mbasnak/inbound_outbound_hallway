@@ -79,7 +79,8 @@ class FlyData(object):
             self.time_list.pop(0)
             self.panel_heading_list.pop(0)
 
-    def update_panel_x(self, gain_x, open_loop, open_loop_value,trial_counter,the_gain,trip_type):
+    def update_panel_x(self, gain_x, open_loop, open_loop_value,trial_counter,the_gain,trip_type,data):
+        intx = data.intx
         if open_loop == 1:
             self.panel_x = open_loop_value
         elif (trial_counter == 16 or trial_counter == 24 or trial_counter == 34 or trial_counter == 44 or trial_counter == 54) and (self.first_frame == True):
@@ -92,12 +93,12 @@ class FlyData(object):
             if self.velx < 0:
                 self.panel_x = self.panel_x #don't allow the fly to go backwards
             else:
-                self.panel_x = (self.panel_x + (self.velx - 0.0033)*gain_x*360/2/np.pi) % 360
+                self.panel_x = (self.panel_x + self.velx*gain_x*360/2/np.pi) % 360
         else:
             if self.velx < 0:
                 self.panel_x = self.panel_x #don't allow the fly to go backwards
             else:
-                self.panel_x = (self.panel_x + (self.velx - 0.0033)*gain_x*360/2/np.pi) % 360
+                self.panel_x = (self.panel_x + self.velx*gain_x*360/2/np.pi) % 360
 
 
     def reset(self):

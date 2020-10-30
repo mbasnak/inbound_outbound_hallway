@@ -28,7 +28,9 @@ total_duration = run_obj.trial_t;
 total_duration = int64(total_duration);
 
 %setting up the camera trigger
-camera_rate = 10; %set the frame rate to be 10 hz
+camera_rate = 1
+
+0; %set the frame rate to be 10 hz
 camera_trigger= zeros(s.Rate*total_duration,1); %pre-allocate the number of frames needed according to the max trial duration
 camera_trigger(1:s.Rate/camera_rate:end) = 1;
 imaging_trigger= zeros(s.Rate*total_duration,1);

@@ -5,6 +5,7 @@ import time
 import math
 import numpy as np
 from Phidget22.Devices.VoltageOutput import VoltageOutput
+import scipy.signal
 
 class FicTracAout(object):
     """
@@ -15,9 +16,8 @@ class FicTracAout(object):
         'rate_to_volt_const': 50,
         'aout_channel_x_gain': 0,
         'aout_channel_x': 1,
-        'aout_channel_yaw_gain': 2,
-        #'aout_channel_y': 3,
-        'aout_channel_yaw': 3,
+        'aout_channel_yaw_gain': 3,
+        'aout_channel_yaw': 2,
         'aout_max_volt': 10.0,
         'aout_min_volt': 0.0,
         'aout_max_volt_vel': 10.0,
@@ -74,7 +74,7 @@ class FicTracAout(object):
         self.test = 0;
 
 
-    def output_voltage(self, data, the_gain, trip_type, trial_counter):
+    def output_voltage(self, data, the_gain, trip_type, trial_counter, x_gain_v):
         """
                 Output analog voltage based on fly data (json from fictrac) and protocol
                 Protocol provides gain_yaw and panel_jump information
@@ -88,7 +88,7 @@ class FicTracAout(object):
         # Set analog output voltage YAW
         output_voltage_yaw = (heading) * (self.param['aout_max_volt'] - self.param['aout_min_volt']) / 360
         output_voltage_yaw = clamp(output_voltage_yaw, self.param['aout_min_volt'], self.param['aout_max_volt'])
-        self.aout_yaw.setVoltage(output_voltage_yaw)
+        #self.aout_yaw.setVoltage(10-output_voltage_yaw)
         if the_gain[0] == 1:        
             self.aout_yaw.setVoltage(output_voltage_yaw)
         else:
@@ -99,8 +99,11 @@ class FicTracAout(object):
         output_voltage_x = wrapped_intx * (self.param['aout_max_volt'] - self.param['aout_min_volt']) / (2 * np.pi)
         output_voltage_x = clamp(output_voltage_x, self.param['aout_min_volt'],
                                  self.param['aout_max_volt'])
-        self.aout_x.setVoltage(output_voltage_x)
-
+        #self.aout_x.setVoltage(output_voltage_x)
+        if the_gain[1] == 1:        
+            self.aout_x.setVoltage(output_voltage_x)
+        else:
+            self.aout_x.setVoltage(10-output_voltage_x)
 
         # Set analog output voltage YAW_GAIN
         output_voltage_yaw_gain = panel_heading * (
@@ -117,42 +120,20 @@ class FicTracAout(object):
                 self.param['aout_max_volt'] - self.param['aout_min_volt']) / (360)
         output_voltage_x_gain = clamp(output_voltage_x_gain, self.param['aout_min_volt'],
                                         self.param['aout_max_volt'])
+        x_gain_v = np.append(x_gain_v,output_voltage_x_gain)
+        filtered_x_gain_v = scipy.signal.medfilt(x_gain_v,3)
         if the_gain[1] == 1:        
             self.aout_x_gain.setVoltage(output_voltage_x_gain)
+            #self.aout_x_gain.setVoltage(filtered_x_gain_v[-1])
+            #return x_gain_v
         else:
             self.aout_x_gain.setVoltage(10-output_voltage_x_gain)
-
-        #if the_gain[1] == 1:
-    #I'm going to set conditions for the panels to freeze if the flies walk backwards enough to go past the hallway's start and end (MB 20200806)        
-           # if (trip_type == 'left' or trip_type == 'left_360_turn_first_half') and (output_voltage_x_gain > 9):
-            #    self.aout_x_gain.setVoltage(0.1)
-             #   self.test = 0
-            #elif (trip_type == 'left_360_turn_second_half') and (output_voltage_x_gain < 5.1):
-             #   self.aout_x_gain.setVoltage(5.2) 
-              #  self.test = 1
-            #else:
-             #   self.aout_x_gain.setVoltage(output_voltage_x_gain)
-              #  self.test = 3
-        #elif (trip_type == 'right'):
-         #   if (trial_counter == (16 or 24 or 34 or 44 or 54)): 
-          #      if (10-output_voltage_x_gain > 9.7):
-           #         self.aout_x_gain.setVoltage(9.5)
-            #        self.test = 4
-             #   else:           
-              #      self.aout_x_gain.setVoltage(10-output_voltage_x_gain)
-               #     self.test = 5
-            #else:
-             #   if (10-output_voltage_x_gain > 5.2):
-              #      self.aout_x_gain.setVoltage(4.9) 
-               #     self.test = 6
-                #else:
-                 #   self.aout_x_gain.setVoltage(10-output_voltage_x_gain)
-                  #  self.test = 7
-
+            #self.aout_x_gain.setVoltage(10-filtered_x_gain_v[-1])
+            #return x_gain_v
 
 
     #I'm adding this function to recover the voltage output in the x gain channel - MB 20190806
-    def voltage_out(self, data, the_gain, trip_type, trial_counter):
+    def voltage_out(self, data, the_gain, trip_type, trial_counter, x_gain_v_2):
         panel_x = data.panel_x
         output_voltage_x_gain = panel_x * (
                 self.param['aout_max_volt'] - self.param['aout_min_volt']) / (360)
@@ -160,28 +141,13 @@ class FicTracAout(object):
                                       self.param['aout_max_volt'])
         if the_gain[1] == 1: #when the gain is 1 (i.e., for all the left type trips)
             return output_voltage_x_gain
+            #return output_voltage_x
+            #return [filtered_x_gain_v_2[-1],x_gain_v_2]
         else:
             return (10-output_voltage_x_gain)
-    #I'm going to set conditions for the panels to freeze if the flies walk backwards enough to go past the hallway's start and end (MB 20200806)        
-           # if (trip_type == 'left' or trip_type == 'left_360_turn_first_half') and (output_voltage_x_gain > 9):
-            #    return 0.1
-            #elif (trip_type == 'left_360_turn_second_half') and (output_voltage_x_gain < 5.1):
-             #   return 5.2          
-            #else:
-             #   return output_voltage_x_gain
-        #elif (trip_type == 'right'): #for the right trips
-         #   if (trial_counter == (16 or 24 or 34 or 44 or 54)): 
-          #      if (10-output_voltage_x_gain > 9.7):
-           #         return 9.5
-            #    else:           
-             #       return (10-output_voltage_x_gain)
-            #else:
-             #   if (10-output_voltage_x_gain > 5.2):
-              #      return 4.9 
-               # else:
-                #    return (10-output_voltage_x_gain)
-
-
+            #return (10-output_voltage_x)
+            #return [(10-filtered_x_gain_v_2[-1]),x_gain_v_2]
+  
 
 
     def run(self, gain_yaw = 1, gain_x = 0.5):
@@ -189,6 +155,9 @@ class FicTracAout(object):
         Loop forever listening for new messages on "fictrac" channel and output an
         analog voltage proportional to heading rate for each new message
         """
+        yaw_v = np.array([0,0,0])
+        x_gain_v = np.array([0,0,0])
+
         while True:
 
             for item in self.pubsub.listen():
@@ -199,6 +168,11 @@ class FicTracAout(object):
                     data = json.loads(message)
                 except TypeError:
                     continue
+
+                #get dictionary keys
+                #def getList(dict): 
+                 #   return dict.keys() 
+      
 
                 # Take action based on message type
 
@@ -229,9 +203,13 @@ class FicTracAout(object):
 
 
                     # Set analog output voltage YAW
-                    output_voltage_yaw = (heading)*(self.param['aout_max_volt']-self.param['aout_min_volt'])/360
+                    #output_voltage_yaw = (heading)*(self.param['aout_max_volt']-self.param['aout_min_volt'])/360
+                    output_voltage_yaw = heading*(self.param['aout_max_volt']-self.param['aout_min_volt'])/360                    
                     output_voltage_yaw = clamp(output_voltage_yaw, self.param['aout_min_volt'], self.param['aout_max_volt'])
+                    yaw_v = np.append(yaw_v,output_voltage_yaw)
+                    filtered_yaw_v = scipy.signal.medfilt(yaw_v,7)
                     self.aout_yaw.setVoltage(10-output_voltage_yaw) #added the 10- to correct gain
+                    #self.aout_yaw.setVoltage(10-filtered_yaw_v[-1])
 
                     # Set analog output voltage X
                     wrapped_intx = (intx % (2 * np.pi))
@@ -252,8 +230,10 @@ class FicTracAout(object):
                                 self.param['aout_max_volt'] - self.param['aout_min_volt']) / (2 * np.pi / gain_x)
                     output_voltage_x_gain = clamp(output_voltage_x_gain, self.param['aout_min_volt'],
                                                     self.param['aout_max_volt'])
-                    
-                    self.aout_x_gain.setVoltage(output_voltage_x_gain)
+                    x_gain_v = np.append(x_gain_v,output_voltage_x_gain)
+                    filtered_x_gain_v = scipy.signal.medfilt(x_gain_v,7)
+                    #self.aout_x_gain.setVoltage(output_voltage_x_gain)
+                    self.aout_x_gain.setVoltage(filtered_x_gain_v[-1])
 
                     # Set analog output voltage Y
                     #wrapped_inty = inty % (2 * np.pi)
@@ -277,6 +257,7 @@ class FicTracAout(object):
                         print('volt:   {0:1.3f}'.format(output_voltage_yaw_gain))
                         print('x gain adjusted:   {0:1.3f}'.format(x_gain_adjusted))
                         print('volt:   {0:1.3f}'.format(output_voltage_x_gain))
+                        #print(getList(data))
                         #print('int y:   {0:1.3f}'.format(wrapped_inty))
                         #print('volt:   {0:1.3f}'.format(output_voltage_y))
                         print()

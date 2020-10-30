@@ -4,6 +4,7 @@ import time
 import redis
 import json
 import signal
+import numpy as np
 
 from . import utils
 from .fly_data import FlyData
@@ -100,6 +101,8 @@ class FicTrac2D(object):
         self.done = False
         signal.signal(signal.SIGINT,self.sigint_handler)
 
+        self.x_gain_v = np.array([0,0,0])
+        self.x_gain_v_2 = np.array([0,0,0])
 
 
     def reset(self):
@@ -119,6 +122,8 @@ class FicTrac2D(object):
         if self.param['arduino']: 
             self.trigger_device.set_low()  #Set the trigger device (arduino COM port defined in trigger_device.py) to low
         while not self.done: #while the time elapsed is less than the experiment time
+
+            #pre-allocating an array to filter the x gain voltage
 
             # Pull latest redis message from queue
             for item in self.pubsub.listen(): #listen to the redis channel
@@ -144,10 +149,13 @@ class FicTrac2D(object):
 
                     # UPDATE ANALOG OUT
                     if self.analog_out:
-                        self.aout.output_voltage(self.data, self.protocol.the_gain, self.protocol.trip_type, self.protocol.trial_counter) #send the analog output through the phidgets device (using analogout.py code)
+                        #self.x_gain_v = self.aout.output_voltage(self.data, self.protocol.the_gain, self.protocol.trip_type, self.protocol.trial_counter, self.x_gain_v) #send the analog output through the phidgets device (using analogout.py code)
+                        self.aout.output_voltage(self.data, self.protocol.the_gain, self.protocol.trip_type, self.protocol.trial_counter, self.x_gain_v) #send the analog output through the phidgets device (using analogout.py code)
+                        
                         #I'm adding the line below to get the voltage output from the x gain channel-MB 20190806
                         #I'm adding the trip type to the function such that we can block the voltage out from 'goign backwards' (MB 20200811)
-                        self.voltage_out = self.aout.voltage_out(self.data, self.protocol.the_gain, self.protocol.trip_type, self.protocol.trial_counter)
+                        #[self.voltage_out,self.x_gain_v_2] = self.aout.voltage_out(self.data, self.protocol.the_gain, self.protocol.trip_type, self.protocol.trial_counter, self.x_gain_v_2)
+                        self.voltage_out = self.aout.voltage_out(self.data, self.protocol.the_gain, self.protocol.trip_type, self.protocol.trial_counter, self.x_gain_v_2)
 
                         # UPDATE PROTOCOL
                         self.protocol.update_panel(self.time_elapsed,
@@ -156,7 +164,7 @@ class FicTrac2D(object):
                                                        self.protocol.open_loop,
                                                        self.protocol.open_loop_value)  # update the yaw movement of the pattern in the panels
                         self.data.update_panel_x(self.gain_x, self.protocol.open_loop_x,
-                                                 self.protocol.open_loop_value_x, self.protocol.trial_counter, self.protocol.the_gain, self.protocol.trip_type)  # update the x movement of the pattern in the panels
+                                                 self.protocol.open_loop_value_x, self.protocol.trial_counter, self.protocol.the_gain, self.protocol.trip_type,self.data)  # update the x movement of the pattern in the panels
                         utils.flush_print('time protocol         = {0:1.3f}'.format(self.time_elapsed))
 
                         self.protocol.update_opto(self.time_elapsed, self.data, self.voltage_out, self.reward_voltage)
@@ -191,6 +199,8 @@ class FicTrac2D(object):
                     utils.flush_print('trip type         = {0}'.format(self.protocol.trip_type))
                     utils.flush_print('turn         = {0:1.3f}'.format(self.protocol.turn))
                     utils.flush_print('panelx         = {0:1.3f}'.format(self.data.panel_x))
+                    #utils.flush_print(self.x_gain_v)
+                    #utils.flush_print(self.x_gain_v_2)
                     utils.flush_print()
 
                     # LOG FILE

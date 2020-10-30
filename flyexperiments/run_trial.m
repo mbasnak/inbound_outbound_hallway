@@ -1,5 +1,5 @@
 function [ trial_data, trial_time ] = run_trial(tid, task, run_obj, scanimage_client, trial_core_name )
-cd('C:\Users\Wilson\Desktop\conditioned_menotaxis-master\experiment');
+cd('C:\Users\Wilson\Desktop\inbound_outbound_hallway\experiment');
 
 % Currently v2
 disp(['About to start trial task: ' task]);

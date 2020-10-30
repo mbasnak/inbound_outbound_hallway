@@ -7,7 +7,8 @@ function varargout = fly_experiments(varargin)
 %      the existing singleton*.
 %
 %      FLY_EXPERIMENTS('Property','Value',...) creates a new FLY_EXPERIMENTS using the
-%      given property value pairs. Unrecognized properties are passed via
+%      given property value
+%pairs. Unrecognized properties are passed via
 %      varargin to fly_experiments_OpeningFcn.  This calling syntax produces a
 %      warning when there is an existing singleton*.
 %
